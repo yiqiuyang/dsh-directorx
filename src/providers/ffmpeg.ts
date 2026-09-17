@@ -29,7 +29,9 @@ export interface MediaProbe {
 }
 
 function requireBinary(command: 'ffmpeg' | 'ffprobe'): string {
-  const found = spawnSync('which', [command], { encoding: 'utf8' })
+  const isWindows = process.platform === 'win32'
+  const probe = isWindows ? 'where' : 'which'
+  const found = spawnSync(probe, [command], { encoding: 'utf8' })
   if (found.status !== 0 || found.stdout.trim() === '') {
     throw new Error(`${command} is required for this operation but was not found on PATH. Install ffmpeg (brew install ffmpeg) or use the model-provider tools instead.`)
   }

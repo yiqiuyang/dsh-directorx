@@ -15,9 +15,12 @@ const SKILL_CONTENT = DIRECTORX_RUNTIME_PRESET.subagentSkill
 
 export function registerSubagentSetup(ctx: Context): () => void {
   const subagents = ctx.get('subagents') as
-    | { registerContinuableSetup(contribution: (childCtx: Context) => () => void): () => void }
+    | { registerContinuableSetup?(contribution: (childCtx: Context) => () => void): () => void }
     | undefined
   if (subagents === undefined) return () => {}
+  // dsh 0.1.2+ 已把该扩展点改名为 startContinuable；0.1.5-rc.1 下此函数不存在，
+  // 守卫跳过子代理编排注入，让服务端能正常加载（画布依赖的 remote.* 由客户端注入）。
+  if (typeof subagents.registerContinuableSetup !== 'function') return () => {}
 
   return subagents.registerContinuableSetup((childCtx) => {
     const systemPrompt = childCtx.get('systemPrompt') as { section(section: { name: string; order?: number; text: string }): () => void } | undefined
