@@ -1880,7 +1880,7 @@ export function syncTools(ctx: Context, settings: DirectorxSettings, applyCapabi
       reverse: { type: 'boolean', description: '倒放。' },
       freezeEnd: { type: 'number', description: '片尾定格秒数。' },
       freezeStart: { type: 'number', description: '片头定格秒数。' },
-      grade: { type: 'string', description: '调色 look 名；不确定时改走 directorx_studio。' },
+      grade: { type: 'string', description: '调色 look 名。' },
     },
     output: objectOutput(),
     timeoutMs: 600_000,
@@ -2549,51 +2549,53 @@ export function syncTools(ctx: Context, settings: DirectorxSettings, applyCapabi
     },
   })))
 
-  disposers.push(ctx.tools.register(safeDefine({
-    name: 'directorx_studio',
-    description: `打开图片/视频编辑工作台，并按自然语言做确定性调色（${listGradeLabels()}）。用户说「把这张照片调成末日荒土配色」时：解析 look → ffmpeg 调色 → 回写画布节点 path → 通知 WebUI 打开对应编辑台。不写 generating。不要用生成模型重绘来完成调色。`,
-    parameters: {
-      prompt: { type: 'string', required: true, description: '调色/编辑意图，如「末日荒土配色」「漂白旁路」「交叉冲印」「夜色」「金黄昏」。' },
-      path: { type: 'string', description: '本地媒体路径。可与 nodeId 二选一。' },
-      nodeId: { type: 'string', description: '画布节点 id。有则回写 path，并按节点 kind 打开编辑台。' },
-      kind: { type: 'string', enum: ['image', 'video'], description: '覆盖自动判断的媒体类型。' },
-      openOnly: { type: 'boolean', description: '只打开编辑台、不调色。默认 false。' },
-    },
-    output: objectOutput(),
-    timeoutMs: 600_000,
-    isConcurrencySafe: () => true,
-    async execute(args: any) {
-      const bound = await resolveBoundMedia({
-        canvas,
-        outputDir: settings.outputDir,
-        nodeId: args.nodeId,
-        path: args.path,
-        kind: args.kind,
-      })
-      if (args.openOnly === true) {
+  if (!settings.disableStudio) {
+    disposers.push(ctx.tools.register(safeDefine({
+      name: 'directorx_studio',
+      description: `打开图片/视频编辑工作台，并按自然语言做确定性调色（${listGradeLabels()}）。用户说「把这张照片调成末日荒土配色」时：解析 look → ffmpeg 调色 → 回写画布节点 path → 通知 WebUI 打开对应编辑台。不写 generating。不要用生成模型重绘来完成调色。`,
+      parameters: {
+        prompt: { type: 'string', required: true, description: '调色/编辑意图，如「末日荒土配色」「漂白旁路」「交叉冲印」「夜色」「金黄昏」。' },
+        path: { type: 'string', description: '本地媒体路径。可与 nodeId 二选一。' },
+        nodeId: { type: 'string', description: '画布节点 id。有则回写 path，并按节点 kind 打开编辑台。' },
+        kind: { type: 'string', enum: ['image', 'video'], description: '覆盖自动判断的媒体类型。' },
+        openOnly: { type: 'boolean', description: '只打开编辑台、不调色。默认 false。' },
+      },
+      output: objectOutput(),
+      timeoutMs: 600_000,
+      isConcurrencySafe: () => true,
+      async execute(args: any) {
+        const bound = await resolveBoundMedia({
+          canvas,
+          outputDir: settings.outputDir,
+          nodeId: args.nodeId,
+          path: args.path,
+          kind: args.kind,
+        })
+        if (args.openOnly === true) {
+          const ticket = await new StudioTicketStore(settings.outputDir).write({
+            kind: bound.kind,
+            path: bound.path,
+            ...(bound.nodeId !== undefined ? { nodeId: bound.nodeId } : {}),
+          })
+          return { ok: true, openStudio: true, kind: bound.kind, path: bound.path, nodeId: bound.nodeId, ticket }
+        }
+        const look = resolveGradeLook(String(args.prompt ?? ''))
+        const graded = await applyGrade({ source: bound.path, look, outputDir: settings.outputDir, kind: bound.kind })
+        const commit = await finishBound(bound, graded, bound.kind === 'video' ? 'video/mp4' : 'image/jpeg')
         const ticket = await new StudioTicketStore(settings.outputDir).write({
-          kind: bound.kind,
-          path: bound.path,
+          kind: graded.kind,
+          path: graded.path,
+          look: graded.look,
           ...(bound.nodeId !== undefined ? { nodeId: bound.nodeId } : {}),
         })
-        return { ok: true, openStudio: true, kind: bound.kind, path: bound.path, nodeId: bound.nodeId, ticket }
-      }
-      const look = resolveGradeLook(String(args.prompt ?? ''))
-      const graded = await applyGrade({ source: bound.path, look, outputDir: settings.outputDir, kind: bound.kind })
-      const commit = await finishBound(bound, graded, bound.kind === 'video' ? 'video/mp4' : 'image/jpeg')
-      const ticket = await new StudioTicketStore(settings.outputDir).write({
-        kind: graded.kind,
-        path: graded.path,
-        look: graded.look,
-        ...(bound.nodeId !== undefined ? { nodeId: bound.nodeId } : {}),
-      })
-      return { ok: true, openStudio: true, ...graded, ...commit, ticket }
-    },
-  })))
+        return { ok: true, openStudio: true, ...graded, ...commit, ticket }
+      },
+    })))
+  }
 
   disposers.push(ctx.tools.register(safeDefine({
     name: 'directorx_edit_plan',
-    description: '编辑路由（零成本）：根据人话意图判定该走 studio / image_edit / video_process / edit / timeline / smart_cut / concat / 质检，还是必须重新生成。不改文件。拿不准先调这个。',
+    description: '编辑路由（零成本）：根据人话意图判定该走 image_edit / video_process / edit / timeline / smart_cut / concat / 质检，还是必须重新生成。不改文件。拿不准先调这个。',
     parameters: {
       intent: { type: 'string', required: true, description: '用户的编辑原话，如「顺时针转 90 度」「去掉开头 2 秒」「调成末日荒土」。' },
       nodeId: { type: 'string', description: '当前画布节点。' },
@@ -2632,7 +2634,7 @@ export function syncTools(ctx: Context, settings: DirectorxSettings, applyCapabi
       brightness: { type: 'number', description: '亮度 -1..1，0 为不变。' },
       contrast: { type: 'number', description: '对比度 0..3，1 为不变。' },
       saturate: { type: 'number', description: '饱和度 0..3，1 为不变。' },
-      look: { type: 'string', description: '调色 look；复杂色板优先 directorx_studio。' },
+      look: { type: 'string', description: '调色 look。' },
     },
     output: objectOutput(),
     timeoutMs: 180_000,
@@ -3621,7 +3623,7 @@ export function registerSystemPrompt(ctx: Context, settings: DirectorxSettings):
       '- Craft decisions cite rules from `directorx-methodology` (成片结构/提示词工程/剪辑节奏/LLM 精剪速查); QC verdicts reference rule numbers.',
       '- The infinite canvas is the storyboard, but writing it is gated. Read freely (`directorx_canvas_get` / `node` / `search` / `summary`). Do **not** `directorx_canvas_plan` or batch-`directorx_canvas_add` until the user has signed the script/storyboard via `directorx_confirm` or an explicit 「落到画布」. Script and character settings must appear as canvas text nodes (`directorx_canvas_script` / `directorx_character_register` / `directorx_storyboard` / `directorx_bible pin`). After a signed plan: `directorx_canvas_plan` or `directorx_canvas_script` (文本拆成 本→首帧→视频 行) then `directorx_canvas_arrange`. 提取帧用 `directorx_canvas_frames`；成片智能解析用 `directorx_canvas_parse`；局部重绘 `directorx_canvas_reshoot` cut → 生成中段 → assemble；多段成片硬切合成用 `directorx_canvas_pack`（预告片禁止 fade）；九宫格用 `directorx_canvas_sheet`；一张图拆分宫格用 `directorx_canvas_split`；多张图合并宫格用 `directorx_canvas_join`；分屏用 `directorx_canvas_stack`；硬字幕用 `directorx_canvas_desub` 去字幕；视频延长用 `directorx_canvas_extend`；评审动图用 `directorx_canvas_gif`；自动连线用 `directorx_canvas_autolink`。Single-node repairs are fine. The WebUI generate bar only queues `directorx_canvas_intents` — it must not write generating nodes. On a canvas instruction, claim with `directorx_canvas_intents` `{ claim: true }`, then continue only after the same confirm gate.',
       '- Generation: NEVER send the canvas one-liner to generate_*. Order is always `directorx_knowledge_search`/`read` + `directorx_skill_search`/`read` (+ web if facts are missing) → `directorx_prompt_craft` → `directorx_generate_ready` (decide 设定图 / 场景空镜 / 关键帧 / 图生 / 首尾帧; if blocked, `directorx_ask` then make the missing asset first) → propose/confirm → generate with `craftId` **and** `readyId`. 严格/协同 still need an approved `proposalId`. 自动也不得跳过 craft/ready。有人名就要角色设定图；连续镜头要上一镜末帧或本镜关键帧；不要把「转场/硬切」误判成首尾帧。同一系列先 `directorx_series apply`。多人连续 / 单镜长拍 / 完全控制先 `directorx_blocking`（用户给角色图+开场+事件顺序，你写台账再 pin）。只改一镜先 `directorx_revise`，回写只改该节点 path。After a canvas intent, write results back with `directorx_canvas_update`.',
-      '- Edit (deterministic, never regenerate): 拿不准先 `directorx_edit_plan`。调色/打开编辑台 → `directorx_studio`（prompt + nodeId）。图片旋转/翻转/裁切/缩放/明暗 → `directorx_image_edit`。单段视频裁剪/变速/静音/倒放/定格 → `directorx_video_process`。多条人话剪辑 → `directorx_edit`。多镜组装 → `directorx_timeline` / `directorx_video_concat`。口播精剪 → 转写后再 `directorx_smart_cut`。这些工具都可带 nodeId，会回写 path、不改镜头标题。完成后 `directorx_extract_frames` + `directorx_view_image` 质检。craft/ready/proposal 只约束生成，不约束本地编辑。不要用生成模型重绘来完成调色、裁切、旋转或变速。',
+      '- Edit (deterministic, never regenerate): 拿不准先 `directorx_edit_plan`。图片旋转/翻转/裁切/缩放/明暗 → `directorx_image_edit`。单段视频裁剪/变速/静音/倒放/定格 → `directorx_video_process`。多条人话剪辑 → `directorx_edit`。多镜组装 → `directorx_timeline` / `directorx_video_concat`。口播精剪 → 转写后再 `directorx_smart_cut`。这些工具都可带 nodeId，会回写 path、不改镜头标题。完成后 `directorx_extract_frames` + `directorx_view_image` 质检。craft/ready/proposal 只约束生成，不约束本地编辑。不要用生成模型重绘来完成调色、裁切、旋转或变速。',
       '- Reporting: when delivering, state the node/shot list, artifact paths (or WebUI cards), canvas updates, and what is next. Then `directorx_skill_capture` present the save-as-skill card. User revision notes belong in `directorx_note` as they happen. Adaptation reviews go through `directorx_bible` (Markdown on the canvas / in the DSH session), never a standalone HTML file. Base claims on tool results, never on promises.',
       '',
       '## DirectorX media tools',

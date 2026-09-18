@@ -20,6 +20,7 @@ function mockSettings(outputDir: string): DirectorxSettings {
     maxPollAttempts: 1,
     persona: '成片',
     initiative: '自动',
+    disableStudio: true,
     vision: cap,
     image: cap,
     video: cap,

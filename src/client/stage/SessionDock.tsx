@@ -492,12 +492,8 @@ const SESSION_CHIPS = [
     text: '请按当前选中节点做画布工具：文本用 directorx_canvas_script 生成分镜（本→首帧→视频）；视频用 directorx_canvas_frames 提取帧，或 directorx_canvas_parse 智能解析成切点分镜稿；局部重绘用 directorx_canvas_reshoot cut，中段生成后再 assemble。多选视频用 directorx_canvas_pack 合成视频；多选图/视频用 directorx_canvas_sheet 出九宫格；单张图用 directorx_canvas_split 拆分宫格；多张图用 directorx_canvas_join 合并宫格；2–4 路用 directorx_canvas_stack 分屏；硬字幕用 directorx_canvas_desub 去字幕；延长用 directorx_canvas_extend 切出尾帧空卡；评审动图用 directorx_canvas_gif。然后再 directorx_canvas_autolink 自动连线。切窗/解析/铺行/拼接/切开/拼回/分屏/去字幕/延长/动图不要生成。',
   },
   {
-    label: '打开编辑台',
-    text: '请对当前选中的画布节点调用 directorx_studio。若我提到了色调或风格，按该描述调色后打开对应编辑工作台；否则只打开编辑台。调色后把新路径写回该节点。不要用生成模型重绘来完成调色。',
-  },
-  {
     label: '精剪当前镜头',
-    text: '请对当前选中的画布节点先 directorx_edit_plan，再按路由调用对应确定性编辑工具（directorx_image_edit / directorx_video_process / directorx_edit / directorx_studio）。必须带 nodeId 回写路径。不要用生成模型重绘来裁切、旋转、调色或变速。做完后 extract_frames，再用宿主 read_image 把帧送进会话质检。',
+    text: '请对当前选中的画布节点先 directorx_edit_plan，再按路由调用对应确定性编辑工具（directorx_image_edit / directorx_video_process / directorx_edit）。必须带 nodeId 回写路径。不要用生成模型重绘来裁切、旋转、调色或变速。做完后 extract_frames，再用宿主 read_image 把帧送进会话质检。',
   },
   {
     label: '质检当前成片',

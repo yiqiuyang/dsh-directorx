@@ -167,12 +167,12 @@ const RULES: Rule[] = [
   },
   {
     id: 'edit',
-    match: /剪辑|精剪|裁剪|裁切|调色|旋转|翻转|变速|倒放|拼接|编辑台|cut list|timeline/i,
+    match: /剪辑|精剪|裁剪|裁切|调色|旋转|翻转|变速|倒放|拼接|cut list|timeline/i,
     mode: 'edit',
     reason: '确定性编辑：先 edit_plan，再本地工具回写节点，不重绘。',
     skills: ['editing-workflow', 'directorx-methodology'],
     knowledge: ['剪辑节奏 转场'],
-    extraTools: ['directorx_edit_plan', 'directorx_studio', 'directorx_image_edit'],
+    extraTools: ['directorx_edit_plan', 'directorx_image_edit'],
   },
   {
     id: 'character',

@@ -25,6 +25,7 @@ export function defaultContractSettings(overrides: Partial<DirectorxSettings> = 
     maxPollAttempts: 1,
     persona: '成片',
     initiative: '自动',
+    disableStudio: false,
     vision: capability(),
     image: capability(),
     video: capability(),

@@ -56,6 +56,8 @@ export interface DirectorxSettings {
   persona: '成片'
   /** Initiative: 严格 / 自动 / 协同. */
   initiative: InitiativeMode
+  /** 隐藏 Studio 编辑台（three.js 编辑器）。默认 true；改回 false 重新注册 directorx_studio。 */
+  disableStudio: boolean
   vision: CapabilitySettings
   image: CapabilitySettings
   video: CapabilitySettings
@@ -94,6 +96,7 @@ export const DirectorxSettings = z.object({
   maxPollAttempts: z.number().step(1).min(1).max(2_000).default(360).description('Maximum async task polling attempts.'),
   persona: z.union(['成片']).default('成片').description('成片 persona：导演角度分析，积极调用知识库与 skill。'),
   initiative: z.union(['严格', '自动', '协同']).default('协同').description('严格：多确认、不生成、二到四个提示词。自动：预算内直接执行生成。协同：提示词和占位，用户审阅后执行生成。'),
+  disableStudio: z.boolean().default(true).description('隐藏 Studio 编辑台（three.js 编辑器）。关闭后不注册 directorx_studio 工具，编辑路由重定向到 ffmpeg 图片编辑。'),
   vision: capability(VISION_MODES, 'deepseek-chat', 'https://api.deepseek.com', 'deepseek-v4-flash-vision-exp'),
   image: capability(IMAGE_MODES, 'openai-images', 'https://api.modelverse.cn/v1', 'gpt-image-2'),
   video: capability(VIDEO_MODES, 'modelverse-tasks', 'https://api.modelverse.cn/v1', 'doubao-seedance-2-0-260128', '2K'),

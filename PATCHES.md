@@ -23,10 +23,22 @@
 - 原因：dsh 0.1.2+ 已把该扩展点改名为 `startContinuable`，0.1.5-rc.1 下旧名不存在；守卫让服务端能在 0.1.5-rc.1 上加载（放弃子代理编排注入，画布依赖的 `remote.*` 由客户端注入，不受影响）
 - 关联：上游 issue #3（DirectorX 自身版本不一致）
 
+## 4. 移除死依赖 tui-image-editor
+
+- 文件：`package.json`（dependencies）
+- 内容：删除 `tui-image-editor`（连带传递依赖 `fabric` → `canvas` 原生模块一并移除）
+- 原因：源码中无任何 import（死依赖），但 `canvas` 原生模块在 Windows 上构建失败（无 node-v127 预编译 + 缺 MSVC），拖慢/污染 install；移除后彻底消除。Studio 编辑台实际用 three.js，与 tui-image-editor 无关。
+
+## 5. `disableStudio` 开关：默认隐藏 Studio 编辑台
+
+- 文件：`src/config.ts`（新增 `disableStudio` 配置，默认 true）、`src/tools.ts`（条件注册 directorx_studio）、`src/edit-plan.ts`（studio 路由重定向 image_edit/video_process）、`src/skill-route.ts`、`src/client/stage/SessionDock.tsx`、`src/client/stage/session-media.ts`、`src/canvas-parse.ts`、`src/tool-collect.ts`
+- 内容：`disableStudio=true`（默认）时不注册 `directorx_studio` 工具；编辑路由把「调色/打开编辑台」重定向到 `directorx_image_edit` / `directorx_video_process`；客户端隐藏「打开编辑台」入口。改回 `false` 即重新注册工具。
+- 原因：Studio 编辑台（three.js）非核心链路，默认隐藏；保留 three.js 依赖与工具代码，一键恢复。
+
 ## 版本 / tag
 
 - 上游基点：`upstream-base` = `369955d`（最后纯上游 commit）
-- 冻结 tag：`v0.2.0-ds-agent.1`
+- 冻结 tag：`v0.2.0-ds-agent.1`（which/guard/header）、`v0.2.0-ds-agent.2`（移除 tui-image-editor + disableStudio 隐藏 Studio）
 
 ## 许可证
 

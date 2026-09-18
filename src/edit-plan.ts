@@ -1,5 +1,4 @@
 export type EditRoute =
-  | 'studio'
   | 'image-edit'
   | 'video-process'
   | 'nl-cut'
@@ -19,7 +18,7 @@ export interface EditPlan {
   next: string[]
 }
 
-const GRADE = /调色|色调|配色|滤镜|grade|look|lut|末日荒土|漂白|交叉冲印|夜色|金黄昏|打开编辑台|编辑台|精修台/
+const GRADE = /调色|色调|配色|滤镜|grade|look|lut|末日荒土|漂白|交叉冲印|夜色|金黄昏/
 const IMAGE_GEOM = /旋转|翻转|镜像|裁切|裁剪|缩放|放大|缩小|hflip|vflip|rotate|crop|resize/
 const VIDEO_PROC = /去掉开头|去掉结尾|只保留|变速|放慢|加快|静音|倒放|定格|freeze|trim|speed|mute|reverse|裁掉前|裁掉后/
 const NL_CUT = /剪辑指令|按这些剪|多条指令|cut list/
@@ -27,7 +26,6 @@ const CONCAT = /拼接|接上|串起来|concat|叠化|硬切成片|多镜组装/
 const SMART = /精剪|按脚本剪|口播剪|对字幕剪|smart.?cut/
 const QC = /质检|抽帧看|看看成片|检查成片|\bqa\b|对照提示词/
 const REGEN = /重绘|重新生成|再生成一张|换个画面|重新出图|重新出片|regen/
-const STUDIO_OPEN = /打开编辑台|打开编辑器|打开工作室|open.?studio/
 
 function parseRotate(text: string): 90 | 180 | 270 | undefined {
   if (/270|逆时针/.test(text)) return 270
@@ -112,7 +110,7 @@ export function planEdit(input: {
       tool: '',
       reason: '这是改画面内容，不是确定性编辑。必须走 knowledge/skill → prompt_craft → generate_ready → generate，不能用剪辑工具冒充重绘。',
       args: {},
-      warnings: ['不要用 studio / image_edit / video_process 完成「换个画面」。'],
+      warnings: ['不要用 image_edit / video_process 完成「换个画面」。'],
       next: ['directorx_knowledge_search', 'directorx_prompt_craft', 'directorx_generate_ready'],
     }
   }
@@ -150,15 +148,15 @@ export function planEdit(input: {
     }
   }
 
-  if (GRADE.test(intent) || STUDIO_OPEN.test(intent)) {
-    const openOnly = STUDIO_OPEN.test(intent) && !/调色|色调|配色|滤镜|荒土|漂白|冲印|夜色|黄昏/.test(intent)
+  if (GRADE.test(intent)) {
+    const targetImage = kind !== 'video'
     return {
-      route: 'studio',
-      tool: 'directorx_studio',
-      reason: openOnly ? '只打开编辑台，不改像素。' : '自然语言调色走 ffmpeg 配方，回写节点并打开编辑台。',
-      args: { prompt: intent, ...bind, ...(openOnly ? { openOnly: true } : {}) },
+      route: targetImage ? 'image-edit' : 'video-process',
+      tool: targetImage ? 'directorx_image_edit' : 'directorx_video_process',
+      reason: targetImage ? '图片调色走 ffmpeg look 配方，回写节点。' : '视频调色走 ffmpeg grade 配方，回写节点。',
+      args: { ...bind, ...(targetImage ? { look: intent } : { grade: intent }) },
       warnings,
-      next: openOnly ? [] : ['directorx_extract_frames', 'directorx_view_image'],
+      next: targetImage ? ['directorx_view_image'] : ['directorx_probe_media', 'directorx_extract_frames'],
     }
   }
 
