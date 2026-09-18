@@ -35,10 +35,16 @@
 - 内容：`disableStudio=true`（默认）时不注册 `directorx_studio` 工具；编辑路由把「调色/打开编辑台」重定向到 `directorx_image_edit` / `directorx_video_process`；客户端隐藏「打开编辑台」入口。改回 `false` 即重新注册工具。
 - 原因：Studio 编辑台（three.js）非核心链路，默认隐藏；保留 three.js 依赖与工具代码，一键恢复。
 
+## 6. `requireBinary` 改用 `-version` 探测（修复中文 PATH 漏检）
+
+- 文件：`src/providers/ffmpeg.ts`
+- 内容：`requireBinary()` 不再用 `where`/`which`（补丁 #2），改为 `spawnSync(command, ['-version'])` 直接探测
+- 原因：`where` 是 ANSI 命令行工具，对非 ASCII（中文）PATH 条目会漏检——项目路径 `D:\AI大模型应用开发\...` 含中文，导致 vendor/ffmpeg 里的 ffprobe 被判为「不存在」；CreateProcess 走 Unicode PATH 搜索能正常命中，且跨平台。
+
 ## 版本 / tag
 
 - 上游基点：`upstream-base` = `369955d`（最后纯上游 commit）
-- 冻结 tag：`v0.2.0-ds-agent.1`（which/guard/header）、`v0.2.0-ds-agent.2`（移除 tui-image-editor + disableStudio 隐藏 Studio）
+- 冻结 tag：`v0.2.0-ds-agent.1`（which/guard/header）、`v0.2.0-ds-agent.2`（移除 tui-image-editor + disableStudio 隐藏 Studio）、`v0.2.0-ds-agent.3`（requireBinary -version 探测修复中文 PATH）
 
 ## 许可证
 

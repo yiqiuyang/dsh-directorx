@@ -29,10 +29,10 @@ export interface MediaProbe {
 }
 
 function requireBinary(command: 'ffmpeg' | 'ffprobe'): string {
-  const isWindows = process.platform === 'win32'
-  const probe = isWindows ? 'where' : 'which'
-  const found = spawnSync(probe, [command], { encoding: 'utf8' })
-  if (found.status !== 0 || found.stdout.trim() === '') {
+  // 用 `-version` 直接 spawn 探测：CreateProcess 走 Unicode PATH 搜索，含中文的目录也能命中；
+  // `where`/`which` 这类命令行工具对非 ASCII PATH 条目不可靠（会漏检中文目录）。
+  const probe = spawnSync(command, ['-version'], { encoding: 'utf8' })
+  if (probe.status !== 0 || probe.error !== undefined) {
     throw new Error(`${command} is required for this operation but was not found on PATH. Install ffmpeg (brew install ffmpeg) or use the model-provider tools instead.`)
   }
   return command
