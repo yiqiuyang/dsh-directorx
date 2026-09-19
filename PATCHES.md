@@ -41,10 +41,16 @@
 - 内容：`requireBinary()` 不再用 `where`/`which`（补丁 #2），改为 `spawnSync(command, ['-version'])` 直接探测
 - 原因：`where` 是 ANSI 命令行工具，对非 ASCII（中文）PATH 条目会漏检——项目路径 `D:\AI大模型应用开发\...` 含中文，导致 vendor/ffmpeg 里的 ffprobe 被判为「不存在」；CreateProcess 走 Unicode PATH 搜索能正常命中，且跨平台。
 
+## 7. 修复图片编辑/调色/帧适配的独立 `which` 检测
+
+- 文件：`src/providers/image-process.ts`、`src/providers/grade.ts`、`src/providers/frame-fit.ts`
+- 内容：三处独立的 `spawnSync('which', ['ffmpeg'])` 改成 `spawnSync('ffmpeg', ['-version'])`（与补丁 #6 一致）
+- 原因：补丁 #2/#6 只修了 `ffmpeg.ts` 的 `requireBinary`，但这三处（图片编辑 `directorx_image_edit`、调色、帧适配）各自还有独立的 `which` 检测，Windows 下同样失败，报「需要本机 ffmpeg」。
+
 ## 版本 / tag
 
 - 上游基点：`upstream-base` = `369955d`（最后纯上游 commit）
-- 冻结 tag：`v0.2.0-ds-agent.1`（which/guard/header）、`v0.2.0-ds-agent.2`（移除 tui-image-editor + disableStudio 隐藏 Studio）、`v0.2.0-ds-agent.3`（requireBinary -version 探测修复中文 PATH）
+- 冻结 tag：`v0.2.0-ds-agent.1`（which/guard/header）、`v0.2.0-ds-agent.2`（移除 tui-image-editor + disableStudio）、`v0.2.0-ds-agent.3`（requireBinary -version 探测）、`v0.2.0-ds-agent.4`（requireBinary 报错带 PATH）、`v0.2.0-ds-agent.5`（image-process/grade/frame-fit 三处 which 修复）
 
 ## 许可证
 

@@ -107,9 +107,9 @@ function buildFilters(input: ImageProcessInput): { filters: string[]; ops: strin
 export async function imageProcess(input: ImageProcessInput): Promise<ImageProcessOutput> {
   if (!existsSync(input.source)) throw new Error(`图片不存在：${input.source}`)
   if (!hasImageOp(input)) throw new Error('没有可执行的图片操作（旋转/翻转/裁切/缩放/明暗/调色）')
-  const which = spawnSync('which', ['ffmpeg'], { encoding: 'utf8' })
-  if (which.status !== 0 || which.stdout.trim() === '') {
-    throw new Error('图片编辑需要本机 ffmpeg。请先安装 ffmpeg（brew install ffmpeg）。')
+  const probe = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8' })
+  if (probe.status !== 0 || probe.error !== undefined) {
+    throw new Error('图片编辑需要本机 ffmpeg。请先安装 ffmpeg 并加入 PATH。')
   }
   const { filters, ops } = buildFilters(input)
   const png = extname(input.source).toLowerCase() === '.png'

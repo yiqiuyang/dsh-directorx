@@ -51,9 +51,9 @@ export async function applyGrade(input: {
 }): Promise<{ path: string; look: GradeLook; kind: 'image' | 'video' }> {
   const source = input.source
   if (!existsSync(source)) throw new Error(`媒体不存在：${source}`)
-  const which = spawnSync('which', ['ffmpeg'], { encoding: 'utf8' })
-  if (which.status !== 0 || which.stdout.trim() === '') {
-    throw new Error('调色需要本机 ffmpeg。请先安装 ffmpeg（brew install ffmpeg）。')
+  const probe = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8' })
+  if (probe.status !== 0 || probe.error !== undefined) {
+    throw new Error('调色需要本机 ffmpeg。请先安装 ffmpeg 并加入 PATH。')
   }
   const kind = input.kind ?? inferMediaKind(source)
   const ext = kind === 'video' ? '.mp4' : (extname(source).toLowerCase() === '.png' ? '.png' : '.jpg')

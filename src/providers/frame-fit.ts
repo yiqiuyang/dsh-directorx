@@ -24,8 +24,8 @@ export function parseAspectRatio(ratio?: string): { w: number; h: number } {
 }
 
 function requireFfmpeg(): boolean {
-  const found = spawnSync('which', ['ffmpeg'], { encoding: 'utf8' })
-  return found.status === 0 && found.stdout.trim() !== ''
+  const found = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8' })
+  return found.status === 0 && found.error === undefined
 }
 
 function runVf(source: string, dest: string, vf: string, what: string): string {
