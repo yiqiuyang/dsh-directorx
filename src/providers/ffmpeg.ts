@@ -33,7 +33,10 @@ function requireBinary(command: 'ffmpeg' | 'ffprobe'): string {
   // `where`/`which` 这类命令行工具对非 ASCII PATH 条目不可靠（会漏检中文目录）。
   const probe = spawnSync(command, ['-version'], { encoding: 'utf8' })
   if (probe.status !== 0 || probe.error !== undefined) {
-    throw new Error(`${command} is required for this operation but was not found on PATH. Install ffmpeg (brew install ffmpeg) or use the model-provider tools instead.`)
+    const detail = probe.error
+      ? `${(probe.error as NodeJS.ErrnoException).code ?? 'ERR'} ${probe.error.message ?? ''}`.trim()
+      : `exit ${probe.status}`
+    throw new Error(`${command} not found or failed to run (${detail}). PATH=${process.env.PATH ?? '(empty)'}. Install ffmpeg or ensure it is on the harness PATH.`)
   }
   return command
 }
